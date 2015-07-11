@@ -46,7 +46,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Compiler.cs" />
+    <Compile Include="DebugForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DebugForm.Designer.cs">
+      <DependentUpon>DebugForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Extensions.cs" />
+    <Compile Include="GBA.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -55,6 +62,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="DebugForm.resx">
+      <DependentUpon>DebugForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -79,6 +89,7 @@
     <None Include="std.pks2">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="test.pks2" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

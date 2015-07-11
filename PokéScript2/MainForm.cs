@@ -14,6 +14,43 @@ namespace PokéScript2
     public partial class MainForm : Form
     {
         private string codeFile = string.Empty;
+        private string romFile = string.Empty;
+        // TODO: dictionary for useful stuff like language settings?
+        private HashSet<string> goodROMCodes = new HashSet<string>()
+        {
+            "AXVE", // Pokemon Ruby - English
+            "AXPE", // Pokemon Sapphire - English
+            "BPRE", // Pokemon FireRed - English
+            "BPGE", // Pokemon LeafGreen - English
+            "BPEE", // Pokemon Emerald - English
+
+            "AXVF", // Pokemon Ruby - French
+            "AXPF", // Pokemon Sapphire - French
+            "BPRF", // Pokemon FireRed - French
+            "BPGE", // Pokemon LeafGreen - French
+            "BPEF", // Pokemon Emerald - French
+
+            "AXVI", // Pokemon Ruby - Italian
+            "AXPI", // Pokemon Sapphire - Italian
+            "BPRI", // Pokemon FireRed - Italian
+            "BPGI", // Pokemon LeafGreen - Italian
+            "BPEI", // Pokemon Emerald - Italian
+
+            "AXVS", // Pokemon Ruby - Spanish
+            "AXPS", // Pokemon Sapphire - Spanish
+            "BPRS", // Pokemon FireRed - Spanish
+            "BPGS", // Pokemon LeafGreen - Spanish
+            "BPES", // Pokemon Emerald - Spanish
+
+            "AXVJ", // Pokemon Ruby - Japanese
+            "AXPJ", // Pokemon Sapphire - Japanese
+            "BPRJ", // Pokemon FireRed - Japanese
+            "BPGJ", // Pokemon LeafGreen - Japanese
+            "BPEJ", // Pokemon Emerald - Japanese
+        };
+
+        private DebugForm debug = new DebugForm();
+        private Compiler compiler = null;
 
         public MainForm(string[] args)
         {
@@ -38,10 +75,14 @@ namespace PokéScript2
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            compiler = new Compiler(ref debug);
             if (!File.Exists("std.pks2"))
             {
-                MessageBox.Show("std.pks2 not found!\n\nThis isn't an error, it just means your scripts won't support the standard library of defined values.\n\nYou should probably go download it.", "Uh-oh!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //MessageBox.Show("std.pks2 not found!\n\nThis isn't an error, it just means your scripts won't support the standard library of defined values.\n\nYou should probably go download it.", "Uh-oh!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                debug.WriteHtmlLine("<span style=\"color: red;\">std.pks2 not found!<br><br>This isn't an error, it just means your scripts won't support the standard library of defined values.<br><br>You should probably go download it.</span>");
             }
+
+            debug.Show();
         }
 
         private void newToolStripMenuItem_Click(object sender, EventArgs e)
@@ -139,30 +180,43 @@ namespace PokéScript2
 
         private void compileToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            try
+            if (romFile == string.Empty)
             {
-                if (txtCode.TextLength > 0)
-                {
-                    Compiler cmpler = new Compiler();
-                    //string[] lines = Compiler.Explode(txtCode.Text);
-                    cmpler.Debug(txtCode.Text);
+                MessageBox.Show("No ROM file has been opened!", "Uh-oh!", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
 
-                    string rlines = "dynamic: 0x" + cmpler.DynamicOffset.ToString("X") + "\nfreespace: " + cmpler.FreeSpaceByte + "\n\n";
-                    /*foreach(string line in lines)
-                    {
-                        rlines += "$" + line + "$\n";
-                    }*/
-                    /*foreach (var b in blocks)
-                    {
-                        rlines += b.ToString() + "\n\n";
-                    }*/
-                    MessageBox.Show(rlines);
+            if (txtCode.TextLength > 0)
+            {
+                debug.Show();
+
+                compiler.Debug(txtCode.Text, romFile);
+            }
+        }
+
+        private void openToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            openFileDialog1.Title = "Open ROM";
+            openFileDialog1.FileName = "";
+            openFileDialog1.Filter = "GBA ROMs|*.gba";
+            if (openFileDialog1.ShowDialog() != DialogResult.OK) return;
+
+            using (GBABinaryReader gb = new GBABinaryReader(openFileDialog1.FileName))
+            {
+                gb.BaseStream.Seek(0xA0, SeekOrigin.Begin);
+                string name = gb.ReadString(12);
+                string code = gb.ReadString(4);
+
+                //MessageBox.Show(string.Format("Name: {0}\nCode: {1}", name, code));
+
+                if (!goodROMCodes.Contains(code))
+                {
+                    MessageBox.Show(string.Format("{0} is not a recognized Pokémon ROM code!", code), "Uh-oh!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
             }
-            catch( Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
+
+            romFile = openFileDialog1.FileName;
         }
     }
 }

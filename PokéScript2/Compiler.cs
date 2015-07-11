@@ -9,6 +9,11 @@ namespace PokéScript2
 {
     public class Compiler
     {
+        private const int EOF = -1;
+
+        private string ROMFilePath;
+        private DebugForm debug;
+
         // Comments: ; // '
         // Block Comments: /* */
         // Unimplemented:
@@ -22,27 +27,94 @@ namespace PokéScript2
         public bool DynamicOverwrite = false;
         public Dictionary<string, uint> Definitions = new Dictionary<string, uint>();
 
-        public void Debug(string code)
+        public Compiler(ref DebugForm debug)
         {
-            string[] lines = Explode(code);
-            Block[] blocks = Preprocess(lines);
+            this.debug = debug;
+        }
+
+        public void Debug(string code, string romFile)
+        {
+            debug.WriteHtmlLine(string.Format("<b>Debug Script at {0}</b>", DateTime.Now));
+
+            try
+            {
+                // Reset the compiler
+                Reset();
+                ROMFilePath = romFile;
+
+                // Load ROM environment variable
+                Definitions[LoadROMCode()] = 0;
+
+                Token[] tokens = Explode(code);
+
+                debug.WriteHtmlLine("<h4>Lexer:</h4>");
+                foreach (var token in tokens)
+                {
+                    debug.WriteHtmlLine("'" + token.ToString() + "'");
+                }
+
+                debug.WriteHtmlLine("Success!");
+            }
+            catch (Exception ex)
+            {
+                debug.WriteHtmlLine("< span style =\"color: red;\">" + ex.Message + "</span>");
+                debug.WriteHtmlLine("Debug failed!");
+            }
+        }
+
+        public void Compile(string code, string romFile)
+        {
+            // Reset
+            Reset();
+            ROMFilePath = romFile;
+
+            // Load ROM environment variable
+            Definitions[LoadROMCode()] = 0;
+
+            Token[] tokens = Explode(code);
+        }
+
+        public void Reset()
+        {
+            ROMFilePath = string.Empty;
+
+            LegacyMode = false;
+            DebugLevel = 1;
+            FreeSpaceByte = 0xFF;
+            DynamicOffset = 0;
+            DynamicOverwrite = false;
+            Definitions.Clear();
+        }
+
+        private string LoadROMCode()
+        {
+            if (ROMFilePath == string.Empty) return null;
+
+            string code;
+            using (GBABinaryReader gb = new GBABinaryReader(ROMFilePath))
+            {
+                gb.BaseStream.Seek(0xAC, SeekOrigin.Begin);
+                code = gb.ReadString(4);
+            }
+            return code;
         }
 
         // ----------------------------------------------------------
         // Lexer
         // ----------------------------------------------------------
         /// <summary>
-        /// Takes an input string and splits it by lines.
-        /// It also removes comments and trims whitespace.
+        /// Takes an input string and splits it into tokens.
         /// </summary>
-        /// <param name="code">Input</param>
-        /// <returns>Formatted strings.</returns>
-        public static string[] Explode(string code)
+        /// <param name="code">The input string.</param>
+        /// <returns>Tokens.</returns>
+        public static Token[] Explode(string code)
         {
-            List<string> result = new List<string>();
+            List<Token> result = new List<Token>();
 
             // TODO: make this more intense
 
+            #region Old
+            /*
             StringBuilder sb = new StringBuilder();
             bool singleLineComment = false, multiLineComment = false;
 
@@ -93,7 +165,410 @@ namespace PokéScript2
                     }
                 }
 
+            */
+            #endregion
+
+            using (StringReader sr = new StringReader(code))
+            {
+                //Line line = null;
+                //int num = 1;
+
+                int line = 1;
+
+                bool ignoreNewLine = false;
+                while (sr.Peek() != EOF)
+                {
+                    char c = (char)sr.Read();
+
+                    if (char.IsWhiteSpace(c)) // New line
+                    {
+                        if (c == '\n')
+                        {
+                            if (ignoreNewLine) ignoreNewLine = false;
+                            else result.Add(new Token(TokenType.NewLine, line));
+
+                            line++;
+                        }
+                    }
+                    else if (c == '/') // Comments!
+                    {
+                        if (sr.Peek() == '/')
+                        {
+                            // Consume the rest of the line
+                            while (sr.Peek() != '\n' && sr.Peek() != EOF)
+                            {
+                                sr.Read();
+                            }
+                        }
+                        else if (sr.Peek() == '*')
+                        {
+                            // Eat '*'
+                            sr.Read();
+
+                            // Loop
+                            while (true)
+                            {
+                                if (sr.Peek() == EOF)
+                                {
+                                    throw new Exception("Unterminated multi-line comment!");
+                                }
+
+                                c = (char)sr.Read();
+                                if (c == '*' && sr.Peek() == '/')
+                                {
+                                    sr.Read();
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception(string.Format("Invalid token '{0}'!", '/'));
+                        }
+                    }
+                    else if (c == ';') // Multile statements on the same line
+                    {
+                        // So, pretend it's a new line I guess
+                        result.Add(new Token('\n', line));
+                    }
+                    else if (c == '\\')
+                    {
+                        // Continue line command
+                        ignoreNewLine = true;
+                    }
+                    else if (c == '=') // String literal 1/== Condition
+                    {
+                        if (sr.Peek() == '=') // ;)
+                        {
+                            sr.Read();
+                            result.Add(new Token(TokenType.EqualTo, line));
+                        }
+                        else
+                        {
+                            // Ignore first space
+                            if (sr.Peek() == '=') sr.Read();
+
+                            // Check for no text
+                            if (sr.Peek() == EOF || sr.Peek() == '\n')
+                            {
+                                throw new Exception("Expected string literal, got nothing!");
+                            }
+
+                            StringBuilder sb = new StringBuilder();
+                            while (sr.Peek() != '\n' && sr.Peek() != EOF)
+                            {
+                                sb.Append((char)sr.Read());
+                            }
+
+                            result.Add(new Token(sb, line));
+                        }
+                    }
+                    else if (c == '"') // String literal 2
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        while (sr.Peek() != '"')
+                        {
+                            if (sr.Peek() == EOF || sr.Peek() == '\n')
+                            {
+                                throw new Exception("Unterminated string literal!");
+                            }
+
+                            sb.Append((char)sr.Read());
+                        }
+
+                        // Eat "
+                        sr.Read();
+
+                        result.Add(new Token(sb, line));
+                    }
+                    else if (c == '<') // String literal 3
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        while (sr.Peek() != '>')
+                        {
+                            if (sr.Peek() == EOF || sr.Peek() == '\n')
+                            {
+                                throw new Exception("Unterminated string literal!");
+                            }
+
+                            sb.Append((char)sr.Read());
+                        }
+
+                        // Eat "
+                        sr.Read();
+
+                        result.Add(new Token(sb, line));
+                    }
+                    else if (char.IsDigit(c))
+                    {
+                        StringBuilder sb = new StringBuilder();
+
+                        // Different options
+                        if (c == '0' && sr.Peek() == 'b')
+                        {
+                            // Eat b
+                            sr.Read();
+
+                            sb.Append("0b");
+                            while (sr.Peek() != EOF)
+                            {
+                                c = (char)sr.Peek();
+                                if (c.IsBinaryDigit())
+                                {
+                                    sb.Append(c);
+                                    sr.Read();
+                                }
+                                else if (char.IsWhiteSpace(c))
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    throw new Exception("Invalid binary number literal!");
+                                }
+                            }
+                        }
+                        else if (c == '0' && sr.Peek() == 'x')
+                        {
+                            // Eat x
+                            sr.Read();
+
+                            sb.Append("0x");
+                            while (sr.Peek() != EOF)
+                            {
+                                c = (char)sr.Peek();
+                                if (c.IsHexDigit())
+                                {
+                                    sb.Append(c);
+                                    sr.Read();
+                                }
+                                else if (char.IsWhiteSpace(c))
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    throw new Exception("Invalid hexadecimal number literal!");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            sb.Append(c);
+
+                            while (sr.Peek() != EOF)
+                            {
+                                c = (char)sr.Peek();
+                                if (char.IsDigit(c))
+                                {
+                                    sb.Append(c);
+                                    sr.Read();
+                                }
+                                else if (char.IsWhiteSpace(c)) break;
+                                else
+                                {
+                                    throw new Exception("Invalid decimal number literal!");
+                                }
+                            }
+                        }
+
+                        // To number
+                        uint? u = sb.ToString().ToUInt32();
+                        if (u == null) throw new Exception("Invalid number literal!");
+                        else result.Add(new Token((uint)u, line));
+                    }
+                    else if (c == '$')
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append("0x");
+
+                        while (sr.Peek() != EOF)
+                        {
+                            c = (char)sr.Peek();
+                            if (c.IsHexDigit())
+                            {
+                                sb.Append(c);
+                                sr.Read();
+                            }
+                            else if (char.IsWhiteSpace(c))
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                throw new Exception("Invalid hexadecimal number literal!");
+                            }
+                        }
+
+                        // To number
+                        uint? u = sb.ToString().ToUInt32();
+                        if (u == null) throw new Exception("Invalid number literal!");
+                        else result.Add(new Token((uint)u, line));
+                    }
+                    else if (c == '#' || c == ':' || c == '@' || char.IsLetter(c))
+                    {
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append(c);
+
+                        while (sr.Peek() != EOF)
+                        {
+                            c = (char)sr.Peek();
+                            if (char.IsLetterOrDigit(c))
+                            {
+                                sb.Append(c);
+                                sr.Read();
+                            }
+                            else break;
+                        }
+
+                        //result.Add(new Token(sb.ToString(), line));
+                        if (sb[0] == '#') result.Add(new Token(TokenType.Directive, sb.ToString(), line));
+                        else if (sb[0] == ':') result.Add(new Token(TokenType.Label, sb.ToString(), line));
+                        else if (sb[0] == '@') result.Add(new Token(TokenType.Label2, sb.ToString(), line));
+                        else result.Add(new Token(TokenType.Command, sb.ToString(), line));
+                    }
+                    else // Characters with no impact of tokenizing
+                    {
+                        switch (c)
+                        {
+                            case '{':
+                                result.Add(new Token(TokenType.LeftCurlyBrace, line));
+                                break;
+                            case '}':
+                                result.Add(new Token(TokenType.RightCurlyBrace, line));
+                                break;
+
+                            // Conditions
+                            case '!':
+                                if (sr.Peek() == '=')
+                                {
+                                    result.Add(new Token(TokenType.NotEqualTo, line));
+                                    sr.Read();
+                                }
+                                else throw new Exception(string.Format("Unexpected character '{0}'!", c));
+                                break;
+
+
+                            default:
+                                throw new Exception(string.Format("Unexpected character '{0}'!", c));
+                        }
+                    }
+                }
+
+                // If a conjoin command was the last used, then error.
+                if (ignoreNewLine)
+                {
+                    throw new Exception("Unfinished conjoin operation!");
+                }
+            }
+
             return result.ToArray();
+        }
+
+        /*public class Line
+        {
+            public int ActualNumber = 0;
+            public List<string> Parts = new List<string>();
+            public int IndentLevel = 0;
+
+            public Line(int number)
+            {
+                ActualNumber = number;
+            }
+
+            public string First()
+            {
+                return Parts.First();
+            }
+            
+            public int Length
+            {
+                get { return Parts.Count; }
+            }
+        }*/
+
+        public class Token
+        {
+            // placeholder for future
+            //public static Token Error = new Token(0);
+
+            public TokenType Type;
+            public object Value;
+            public int Line;
+
+            // null
+            public Token()
+            {
+                Type = TokenType.None;
+                Value = "";
+                Line = -1;
+            }
+
+            public Token(TokenType type, int line)
+            {
+                Type = type;
+                Value = "";
+                Line = line;
+            }
+
+            // Characters
+            /*public Token(char c, int line)
+            {
+                Value = c;
+                Line = line;
+            }*/
+
+            // Statements
+            public Token(TokenType type, string s, int line)
+            {
+                Type = type;
+                Value = s;
+                Line = line;
+            }
+
+            // String literal
+            public Token(StringBuilder sb, int line)
+            {
+                Type = TokenType.StringLiteral;
+                Value = sb;
+                Line = line;
+            }
+
+            // Number literal
+            public Token(uint i, int line)
+            {
+                Type = TokenType.NumberLiteral;
+                Value = i;
+                Line = line;
+            }
+
+            public override string ToString()
+            {
+                if (Value != null) return Line + ": " + Type.ToString() + " ~ " + Value.ToString();
+                else return "~";
+            }
+        }
+
+        public enum TokenType
+        {
+            None,
+            StringLiteral,
+            NumberLiteral,
+            Directive, // #...
+            Label, // :...
+            Label2, // @...
+            Command, // ...
+
+            NewLine,
+            LeftCurlyBrace,
+            RightCurlyBrace,
+
+            NotEqualTo,
+            EqualTo,
+            LessThan,
+            LessThanOrEqualTo,
+            GreaterThan,
+            GreaterThanOrEqualTo,
         }
 
         // ----------------------------------------------------------

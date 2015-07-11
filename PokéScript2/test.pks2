@@ -1,0 +1,20 @@
+﻿/* This is a multiline
+ * comment! 
+ * Did it work?
+ */
+#dyn 0x800000
+
+#include "This isn't a valid file."
+
+// This is a single-line comment!
+#org @start
+nop0
+nop1
+end
+
+#org @m1
+= This is a single line string.
+
+
+
+

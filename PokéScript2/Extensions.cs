@@ -83,10 +83,19 @@ namespace PokéScript2
             }
         }*/
 
-        /*public static string TrimComments(this string s)
+        public static bool IsHexDigit(this char c)
         {
-            string[] comments = { ";", "//", "'" };
-        }*/
+            if (c >= 'a' && c <= 'f') return true;
+            else if (c >= 'A' && c <= 'F') return true;
+            else if (char.IsDigit(c)) return true;
+            else return false;
+        }
+
+        public static bool IsBinaryDigit(this char c)
+        {
+            if (c == '0' || c == '1') return true;
+            else return false;
+        }
 
     }
 }

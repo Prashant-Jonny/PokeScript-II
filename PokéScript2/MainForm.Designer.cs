@@ -79,7 +79,7 @@
             this.rOMToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1075, 49);
+            this.menuStrip1.Size = new System.Drawing.Size(1075, 52);
             this.menuStrip1.TabIndex = 1;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -94,51 +94,51 @@
             this.toolStripSeparator2,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(75, 45);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(75, 48);
             this.fileToolStripMenuItem.Text = "File";
             // 
             // newToolStripMenuItem
             // 
             this.newToolStripMenuItem.Name = "newToolStripMenuItem";
-            this.newToolStripMenuItem.Size = new System.Drawing.Size(255, 46);
+            this.newToolStripMenuItem.Size = new System.Drawing.Size(327, 46);
             this.newToolStripMenuItem.Text = "New";
             this.newToolStripMenuItem.Click += new System.EventHandler(this.newToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(252, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(324, 6);
             // 
             // openToolStripMenuItem
             // 
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
-            this.openToolStripMenuItem.Size = new System.Drawing.Size(255, 46);
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(327, 46);
             this.openToolStripMenuItem.Text = "Open";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
             // saveToolStripMenuItem
             // 
             this.saveToolStripMenuItem.Name = "saveToolStripMenuItem";
-            this.saveToolStripMenuItem.Size = new System.Drawing.Size(255, 46);
+            this.saveToolStripMenuItem.Size = new System.Drawing.Size(327, 46);
             this.saveToolStripMenuItem.Text = "Save";
             this.saveToolStripMenuItem.Click += new System.EventHandler(this.saveToolStripMenuItem_Click);
             // 
             // saveAsToolStripMenuItem
             // 
             this.saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
-            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(255, 46);
+            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(327, 46);
             this.saveAsToolStripMenuItem.Text = "Save As...";
             this.saveAsToolStripMenuItem.Click += new System.EventHandler(this.saveAsToolStripMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
-            this.toolStripSeparator2.Size = new System.Drawing.Size(252, 6);
+            this.toolStripSeparator2.Size = new System.Drawing.Size(324, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(255, 46);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(327, 46);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
@@ -148,7 +148,7 @@
             this.undoToolStripMenuItem,
             this.redoToolStripMenuItem});
             this.editToolStripMenuItem.Name = "editToolStripMenuItem";
-            this.editToolStripMenuItem.Size = new System.Drawing.Size(80, 45);
+            this.editToolStripMenuItem.Size = new System.Drawing.Size(80, 48);
             this.editToolStripMenuItem.Text = "Edit";
             // 
             // undoToolStripMenuItem
@@ -170,24 +170,25 @@
             this.toolStripSeparator3,
             this.compileToolStripMenuItem});
             this.rOMToolStripMenuItem.Name = "rOMToolStripMenuItem";
-            this.rOMToolStripMenuItem.Size = new System.Drawing.Size(98, 45);
+            this.rOMToolStripMenuItem.Size = new System.Drawing.Size(98, 48);
             this.rOMToolStripMenuItem.Text = "ROM";
             // 
             // openToolStripMenuItem1
             // 
             this.openToolStripMenuItem1.Name = "openToolStripMenuItem1";
-            this.openToolStripMenuItem1.Size = new System.Drawing.Size(244, 46);
+            this.openToolStripMenuItem1.Size = new System.Drawing.Size(327, 46);
             this.openToolStripMenuItem1.Text = "Open";
+            this.openToolStripMenuItem1.Click += new System.EventHandler(this.openToolStripMenuItem1_Click);
             // 
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
-            this.toolStripSeparator3.Size = new System.Drawing.Size(241, 6);
+            this.toolStripSeparator3.Size = new System.Drawing.Size(324, 6);
             // 
             // compileToolStripMenuItem
             // 
             this.compileToolStripMenuItem.Name = "compileToolStripMenuItem";
-            this.compileToolStripMenuItem.Size = new System.Drawing.Size(244, 46);
+            this.compileToolStripMenuItem.Size = new System.Drawing.Size(327, 46);
             this.compileToolStripMenuItem.Text = "Compile";
             this.compileToolStripMenuItem.Click += new System.EventHandler(this.compileToolStripMenuItem_Click);
             // 
@@ -196,9 +197,9 @@
             this.txtCode.AcceptsTab = true;
             this.txtCode.Dock = System.Windows.Forms.DockStyle.Fill;
             this.txtCode.Font = new System.Drawing.Font("Consolas", 9.900001F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.txtCode.Location = new System.Drawing.Point(0, 49);
+            this.txtCode.Location = new System.Drawing.Point(0, 52);
             this.txtCode.Name = "txtCode";
-            this.txtCode.Size = new System.Drawing.Size(1075, 825);
+            this.txtCode.Size = new System.Drawing.Size(1075, 822);
             this.txtCode.TabIndex = 2;
             this.txtCode.Text = "";
             this.txtCode.WordWrap = false;
