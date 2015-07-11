@@ -1,8 +1,8 @@
-﻿; Standard Definitions for PokéScript II
-; Read more: http://www.pokecommunity.com/showthread.php?t=350668
-; Feel free to add more, they won't break anything.
+﻿// Standard Definitions for PokéScript II
+// Read more: http://www.pokecommunity.com/showthread.php?t=350668
+// Feel free to add more, they won't break anything.
 
-; Standard values
+// Standard values
 #define NULL 0x0
 #define YES 0x1
 #define NO 0x0
@@ -11,19 +11,19 @@
 #define GIRL 0x1
 #define BOY 0x0
 
-; applymovement IDs
+// Applymovement IDs
 #define PLAYER 0xFF
 #define CAMERA 0x7F
 
-; variables
+// Variables
 #define PLAYERFACING 0x800C
 #define LASTRESULT 0x800D
 #define LASTTALKED 0x800F
 
-; specials
+// Specials
 #define HEAL_POKEMON 0x0
 
-; message standard functions
+// Message standard functions
 #define MSG_OBTAIN 0x0
 #define MSG_FIND 0x1
 #define MSG_FACE 0x2

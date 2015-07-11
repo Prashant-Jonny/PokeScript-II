@@ -1,19 +1,22 @@
 ﻿/* This is a multiline
  * comment! 
- * Did it work?
+ * It works!
  */
-#dyn 0x800000
+#dyn 0x800000 ; #freespace 0xFF // You could use #dynamic too.
 
-#include "This isn't a valid file."
+#include <nothing.pks2> /* This file does not exist! */
 
 // This is a single-line comment!
 #org @start
-nop0
-nop1
+while 0x800D <> 1 {
+	text 5 \
+	"Would you like to exit?"
+}
+// TODO: figure out how to show @m1
 end
 
 #org @m1
-= This is a single line string.
+= You exited!
 
 
 

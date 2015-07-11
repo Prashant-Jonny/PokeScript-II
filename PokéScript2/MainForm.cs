@@ -82,6 +82,16 @@ namespace PokéScript2
                 debug.WriteHtmlLine("<span style=\"color: red;\">std.pks2 not found!<br><br>This isn't an error, it just means your scripts won't support the standard library of defined values.<br><br>You should probably go download it.</span>");
             }
 
+            using (IniReader std = new IniReader("Data\\standard.cdb"))
+            {
+                var names = std.ReadSection("names");
+
+                foreach (string key in names.Keys)
+                {
+                    txtCode.Text += key + " ~ " + names[key] + "\n";
+                }
+            }
+
             debug.Show();
         }
 
@@ -178,6 +188,36 @@ namespace PokéScript2
             Close();
         }
 
+        private void undoToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            txtCode.Undo();
+        }
+
+        private void redoToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            txtCode.Redo();
+        }
+
+        private void cutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            txtCode.Cut();
+        }
+
+        private void copyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            txtCode.Copy();
+        }
+
+        private void pasteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            txtCode.Paste();
+        }
+
+        private void selectAllToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            txtCode.SelectAll();
+        }
+
         private void compileToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (romFile == string.Empty)
@@ -194,7 +234,7 @@ namespace PokéScript2
             }
         }
 
-        private void openToolStripMenuItem1_Click(object sender, EventArgs e)
+        private void openROMToolStripMenuItem_Click(object sender, EventArgs e)
         {
             openFileDialog1.Title = "Open ROM";
             openFileDialog1.FileName = "";
@@ -218,5 +258,7 @@ namespace PokéScript2
 
             romFile = openFileDialog1.FileName;
         }
+
+        
     }
 }

@@ -37,7 +37,7 @@
             this.txtDebug.Location = new System.Drawing.Point(0, 0);
             this.txtDebug.MinimumSize = new System.Drawing.Size(20, 20);
             this.txtDebug.Name = "txtDebug";
-            this.txtDebug.Size = new System.Drawing.Size(1059, 490);
+            this.txtDebug.Size = new System.Drawing.Size(1254, 490);
             this.txtDebug.TabIndex = 0;
             this.txtDebug.Navigating += new System.Windows.Forms.WebBrowserNavigatingEventHandler(this.txtDebug_Navigating);
             // 
@@ -45,7 +45,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(16F, 31F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1059, 490);
+            this.ClientSize = new System.Drawing.Size(1254, 490);
             this.Controls.Add(this.txtDebug);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
             this.Name = "DebugForm";

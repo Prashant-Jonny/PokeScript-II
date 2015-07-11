@@ -20,8 +20,19 @@ namespace PokéScript2
         // Line Join: \
 
         // Some options and stuff
-        public bool LegacyMode = false;
-        public int DebugLevel = 1; // 0 = quiet, 1 = normal, 2 = loud
+        public enum CompilerMode
+        {
+            Standard,
+            Legacy,
+            Battle, // These two are not supported yet. ;)
+            BattleAI,
+        }
+        public CompilerMode Mode = CompilerMode.Standard;
+        public enum DebugLevel
+        {
+            Quiet, Normal, Loud
+        }
+        public DebugLevel DebugMode = DebugLevel.Normal; // 0 = quiet, 1 = normal, 2 = loud
         public byte FreeSpaceByte = 0xFF;
         public uint DynamicOffset = 0x0;
         public bool DynamicOverwrite = false;
@@ -34,7 +45,7 @@ namespace PokéScript2
 
         public void Debug(string code, string romFile)
         {
-            debug.WriteHtmlLine(string.Format("<b>Debug Script at {0}</b>", DateTime.Now));
+            debug.WriteHtml(string.Format("<h3>Debug Script at {0}</h3>", DateTime.Now));
 
             try
             {
@@ -45,19 +56,23 @@ namespace PokéScript2
                 // Load ROM environment variable
                 Definitions[LoadROMCode()] = 0;
 
-                Token[] tokens = Explode(code);
+                Line[] lines = Explode(code);
+                Preprocess(lines);
 
-                debug.WriteHtmlLine("<h4>Lexer:</h4>");
-                foreach (var token in tokens)
+                if (DebugMode == DebugLevel.Loud)
                 {
-                    debug.WriteHtmlLine("'" + token.ToString() + "'");
+                    debug.WriteHtml("<h4>Lexer:</h4>");
+                    foreach (var line in lines)
+                    {
+                        debug.WriteHtmlLine("" + line.ToString() + "");
+                    }
                 }
 
-                debug.WriteHtmlLine("Success!");
+                debug.WriteHtmlLine("<span style =\"color: green;\"><br>Success!</span>");
             }
             catch (Exception ex)
             {
-                debug.WriteHtmlLine("< span style =\"color: red;\">" + ex.Message + "</span>");
+                debug.WriteHtmlLine("<span style =\"color: red;\">" + ex.Message + "</span>");
                 debug.WriteHtmlLine("Debug failed!");
             }
         }
@@ -71,15 +86,15 @@ namespace PokéScript2
             // Load ROM environment variable
             Definitions[LoadROMCode()] = 0;
 
-            Token[] tokens = Explode(code);
+            //Token[] tokens = Explode(code);
         }
 
         public void Reset()
         {
             ROMFilePath = string.Empty;
 
-            LegacyMode = false;
-            DebugLevel = 1;
+            Mode = CompilerMode.Standard;
+            DebugMode = DebugLevel.Normal;
             FreeSpaceByte = 0xFF;
             DynamicOffset = 0;
             DynamicOverwrite = false;
@@ -102,71 +117,15 @@ namespace PokéScript2
         // ----------------------------------------------------------
         // Lexer
         // ----------------------------------------------------------
+        #region
         /// <summary>
-        /// Takes an input string and splits it into tokens.
+        /// Takes an input string and splits it into tokens and lines.
         /// </summary>
         /// <param name="code">The input string.</param>
-        /// <returns>Tokens.</returns>
-        public static Token[] Explode(string code)
+        /// <returns>Lines containing tokens.</returns>
+        private Line[] Explode(string code)
         {
-            List<Token> result = new List<Token>();
-
-            // TODO: make this more intense
-
-            #region Old
-            /*
-            StringBuilder sb = new StringBuilder();
-            bool singleLineComment = false, multiLineComment = false;
-
-            using (StringReader sr = new StringReader(code))
-                while (sr.Peek() != -1)
-                {
-                    char c = (char)sr.Read();
-                    if (c == '\n')
-                    {
-                        string line = sb.ToString().TrimEnd();
-                        if (line.Length > 0) result.Add(line);
-                        sb.Clear();
-
-                        if (singleLineComment) singleLineComment = false;
-                    }
-                    else if (c == ';')
-                    {
-                        singleLineComment = true;
-                    }
-                    else if (c == '\'')
-                    {
-                        singleLineComment = true;
-                    }
-                    else if (c == '/')
-                    {
-                        if (sr.Peek() == '/')
-                        {
-                            sr.Read();
-                            singleLineComment = true;
-                        }
-                        else if (sr.Peek() == '*')
-                        {
-                            sr.Read();
-                            multiLineComment = true;
-                        }
-                    }
-                    else if (c == '*')
-                    {
-                        if (multiLineComment && sr.Peek() == '/')
-                        {
-                            sr.Read();
-                            multiLineComment = false;
-                        }
-                    }
-                    else
-                    {
-                        if (!singleLineComment && !multiLineComment) sb.Append(c);
-                    }
-                }
-
-            */
-            #endregion
+            List<Token> tokens = new List<Token>();
 
             using (StringReader sr = new StringReader(code))
             {
@@ -185,7 +144,7 @@ namespace PokéScript2
                         if (c == '\n')
                         {
                             if (ignoreNewLine) ignoreNewLine = false;
-                            else result.Add(new Token(TokenType.NewLine, line));
+                            else tokens.Add(new Token(TokenType.NewLine, line));
 
                             line++;
                         }
@@ -219,6 +178,7 @@ namespace PokéScript2
                                     sr.Read();
                                     break;
                                 }
+                                else if (c == '\n') line++; // Increment line counter. ;)
                             }
                         }
                         else
@@ -229,7 +189,7 @@ namespace PokéScript2
                     else if (c == ';') // Multile statements on the same line
                     {
                         // So, pretend it's a new line I guess
-                        result.Add(new Token('\n', line));
+                        tokens.Add(new Token(TokenType.NewLine, line));
                     }
                     else if (c == '\\')
                     {
@@ -241,12 +201,12 @@ namespace PokéScript2
                         if (sr.Peek() == '=') // ;)
                         {
                             sr.Read();
-                            result.Add(new Token(TokenType.EqualTo, line));
+                            tokens.Add(new Token(TokenType.EqualTo, line));
                         }
                         else
                         {
                             // Ignore first space
-                            if (sr.Peek() == '=') sr.Read();
+                            if (sr.Peek() == ' ') sr.Read();
 
                             // Check for no text
                             if (sr.Peek() == EOF || sr.Peek() == '\n')
@@ -260,7 +220,7 @@ namespace PokéScript2
                                 sb.Append((char)sr.Read());
                             }
 
-                            result.Add(new Token(sb, line));
+                            tokens.Add(new Token(TokenType.StringLiteral, sb, line));
                         }
                     }
                     else if (c == '"') // String literal 2
@@ -279,25 +239,46 @@ namespace PokéScript2
                         // Eat "
                         sr.Read();
 
-                        result.Add(new Token(sb, line));
+                        tokens.Add(new Token(TokenType.InlineStringLiteral, sb, line));
                     }
-                    else if (c == '<') // String literal 3
+                    else if (c == '<') // String literal 3/Conditionals
                     {
-                        StringBuilder sb = new StringBuilder();
-                        while (sr.Peek() != '>')
+                        // Why does this need to be so complicated?
+                        // It would be so much simpler if didn't bother with this type of string.
+                        // It's only used in #include anyway.
+                        if (sr.Peek() == ' ')
                         {
-                            if (sr.Peek() == EOF || sr.Peek() == '\n')
+                            tokens.Add(new Token(TokenType.LessThan, line));
+                            sr.Read();
+                        }
+                        else if (sr.Peek() == '>')
+                        {
+                            tokens.Add(new Token(TokenType.NotEqualTo, line));
+                            sr.Read();
+                        }
+                        else if (sr.Peek() == '=')
+                        {
+                            tokens.Add(new Token(TokenType.LessThanOrEqualTo, line));
+                            sr.Read();
+                        }
+                        else
+                        {
+                            StringBuilder sb = new StringBuilder();
+                            while (sr.Peek() != '>')
                             {
-                                throw new Exception("Unterminated string literal!");
+                                if (sr.Peek() == EOF || sr.Peek() == '\n')
+                                {
+                                    throw new Exception("Unterminated string literal!");
+                                }
+
+                                sb.Append((char)sr.Read());
                             }
 
-                            sb.Append((char)sr.Read());
+                            // Eat >
+                            sr.Read();
+
+                            tokens.Add(new Token(TokenType.InlineStringLiteral2, sb, line));
                         }
-
-                        // Eat "
-                        sr.Read();
-
-                        result.Add(new Token(sb, line));
                     }
                     else if (char.IsDigit(c))
                     {
@@ -375,7 +356,7 @@ namespace PokéScript2
                         // To number
                         uint? u = sb.ToString().ToUInt32();
                         if (u == null) throw new Exception("Invalid number literal!");
-                        else result.Add(new Token((uint)u, line));
+                        else tokens.Add(new Token(TokenType.NumberLiteral, (uint)u, line));
                     }
                     else if (c == '$')
                     {
@@ -403,7 +384,7 @@ namespace PokéScript2
                         // To number
                         uint? u = sb.ToString().ToUInt32();
                         if (u == null) throw new Exception("Invalid number literal!");
-                        else result.Add(new Token((uint)u, line));
+                        else tokens.Add(new Token(TokenType.NumberLiteral, (uint)u, line));
                     }
                     else if (c == '#' || c == ':' || c == '@' || char.IsLetter(c))
                     {
@@ -413,7 +394,7 @@ namespace PokéScript2
                         while (sr.Peek() != EOF)
                         {
                             c = (char)sr.Peek();
-                            if (char.IsLetterOrDigit(c))
+                            if (char.IsLetterOrDigit(c) || c == '_')
                             {
                                 sb.Append(c);
                                 sr.Read();
@@ -422,30 +403,47 @@ namespace PokéScript2
                         }
 
                         //result.Add(new Token(sb.ToString(), line));
-                        if (sb[0] == '#') result.Add(new Token(TokenType.Directive, sb.ToString(), line));
-                        else if (sb[0] == ':') result.Add(new Token(TokenType.Label, sb.ToString(), line));
-                        else if (sb[0] == '@') result.Add(new Token(TokenType.Label2, sb.ToString(), line));
-                        else result.Add(new Token(TokenType.Command, sb.ToString(), line));
+                        if (sb[0] == '#') tokens.Add(new Token(TokenType.Directive, sb.ToString(), line));
+                        else if (sb[0] == ':') tokens.Add(new Token(TokenType.Label, sb.ToString(), line));
+                        else if (sb[0] == '@') tokens.Add(new Token(TokenType.Label2, sb.ToString(), line));
+                        else tokens.Add(new Token(TokenType.Command, sb.ToString(), line));
                     }
                     else // Characters with no impact of tokenizing
                     {
                         switch (c)
                         {
                             case '{':
-                                result.Add(new Token(TokenType.LeftCurlyBrace, line));
+                                tokens.Add(new Token(TokenType.LeftCurlyBrace, line));
                                 break;
                             case '}':
-                                result.Add(new Token(TokenType.RightCurlyBrace, line));
+                                tokens.Add(new Token(TokenType.RightCurlyBrace, line));
                                 break;
 
                             // Conditions
                             case '!':
                                 if (sr.Peek() == '=')
                                 {
-                                    result.Add(new Token(TokenType.NotEqualTo, line));
+                                    tokens.Add(new Token(TokenType.NotEqualTo, line));
                                     sr.Read();
                                 }
                                 else throw new Exception(string.Format("Unexpected character '{0}'!", c));
+                                break;
+
+                            case '<':
+                                if (sr.Peek() == '>')
+                                {
+                                    tokens.Add(new Token(TokenType.NotEqualTo, line));
+                                    sr.Read();
+                                }
+                                else if (sr.Peek() == '=')
+                                {
+                                    tokens.Add(new Token(TokenType.LessThanOrEqualTo, line));
+                                    sr.Read();
+                                }
+                                else
+                                {
+                                    tokens.Add(new Token(TokenType.LessThan, line));
+                                }
                                 break;
 
 
@@ -462,32 +460,34 @@ namespace PokéScript2
                 }
             }
 
-            return result.ToArray();
+            // Split it up into lines
+            // A fairly simple
+            List<Line> lines = new List<Line>();
+
+            List<Token> line1 = new List<Token>();
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                var token = tokens[i];
+                if (token.Type == TokenType.NewLine)
+                {
+                    // Add the NewLine?
+                    // Nah...
+                    if (line1.Count > 0)
+                    {
+                        lines.Add(new Line(line1.ToArray()));
+                        line1.Clear();
+                    }
+                }
+                else
+                {
+                    line1.Add(token);
+                }
+            }
+
+            return lines.ToArray();
         }
 
-        /*public class Line
-        {
-            public int ActualNumber = 0;
-            public List<string> Parts = new List<string>();
-            public int IndentLevel = 0;
-
-            public Line(int number)
-            {
-                ActualNumber = number;
-            }
-
-            public string First()
-            {
-                return Parts.First();
-            }
-            
-            public int Length
-            {
-                get { return Parts.Count; }
-            }
-        }*/
-
-        public class Token
+        private class Token
         {
             // placeholder for future
             //public static Token Error = new Token(0);
@@ -511,12 +511,7 @@ namespace PokéScript2
                 Line = line;
             }
 
-            // Characters
-            /*public Token(char c, int line)
-            {
-                Value = c;
-                Line = line;
-            }*/
+            // Characters are handled by token type
 
             // Statements
             public Token(TokenType type, string s, int line)
@@ -527,53 +522,138 @@ namespace PokéScript2
             }
 
             // String literal
-            public Token(StringBuilder sb, int line)
+            public Token(TokenType type, StringBuilder sb, int line)
             {
-                Type = TokenType.StringLiteral;
+                Type = type;
                 Value = sb;
                 Line = line;
             }
 
             // Number literal
-            public Token(uint i, int line)
+            public Token(TokenType type, uint i, int line)
             {
-                Type = TokenType.NumberLiteral;
+                Type = type;
                 Value = i;
                 Line = line;
             }
 
             public override string ToString()
             {
-                if (Value != null) return Line + ": " + Type.ToString() + " ~ " + Value.ToString();
+                if (Value != null) return Type.ToString() + " ~ " + Value.ToString();
                 else return "~";
             }
         }
 
-        public enum TokenType
+        private enum TokenType
         {
             None,
-            StringLiteral,
-            NumberLiteral,
             Directive, // #...
             Label, // :...
             Label2, // @...
             Command, // ...
+            StringLiteral, // = ...
+            InlineStringLiteral, // "..."
+            InlineStringLiteral2, // <...>
+            NumberLiteral, // 
 
-            NewLine,
-            LeftCurlyBrace,
-            RightCurlyBrace,
+            NewLine, // \n
+            LeftCurlyBrace, // {
+            RightCurlyBrace, // }
 
-            NotEqualTo,
-            EqualTo,
-            LessThan,
-            LessThanOrEqualTo,
-            GreaterThan,
-            GreaterThanOrEqualTo,
+            NotEqualTo, // !=, <>
+            EqualTo, // ==
+            LessThan, // <
+            LessThanOrEqualTo, // <=
+            GreaterThan, // >
+            GreaterThanOrEqualTo, // >=
         }
+
+        // A helper class
+        // Provides some stuff for reading too
+        private class Line
+        {
+            public Token[] Tokens;
+            public int Number;
+            public bool Processed;
+
+            private int pos = 0;
+
+            public Line(Token[] tokens)
+            {
+                Tokens = tokens;
+                Number = tokens.First().Line;
+                Processed = false;
+            }
+
+            public Token this[int index]
+            {
+                get { return Tokens[index]; }
+            }
+
+            public Token First()
+            {
+                return Tokens.First();
+            }
+
+            // Make it act like a "reader"
+
+            public Token Next()
+            {
+                if (pos >= Tokens.Length) return null;
+                else
+                {
+                    var t = Tokens[pos];
+                    pos++;
+                    return t;
+                }
+            }
+
+            public Token Peek()
+            {
+                if (pos >= Tokens.Length) return null;
+                else return Tokens[pos];
+            }
+
+            public bool Expect(TokenType type)
+            {
+                if (pos >= Tokens.Length) return false;
+                else return Tokens[pos].Type == type;
+            }
+
+            public int TokenPosition
+            {
+                get { return pos; }
+                set { pos = value; }
+            }
+
+            public int Length
+            {
+                get { return Tokens.Length; }
+            }
+
+            public override string ToString()
+            {
+                string s = Number + ": ";
+                for (int i = 0; i < Tokens.Length; i++)
+                {
+                    s += Tokens[i].ToString();
+                    if (i < Tokens.Length - 1) s += ", ";
+                }
+                return s;
+            }
+        }
+        #endregion
 
         // ----------------------------------------------------------
         // Preprocessor
         // ----------------------------------------------------------
+        private void Preprocess(Line[] lines)
+        {
+            // First, do the directives that can only happen at the top
+            // This includes things like #dynamic, #freespace, #mode, #include, etc.
+        }
+
+        /*
         private Block[] Preprocess(string[] lines)
         {
             List<Block> result = new List<Block>();
@@ -769,6 +849,66 @@ namespace PokéScript2
             return name && args;
         }
 
+        */
+        // This is going to be super light-weight compared to the rest of this thing.
+        // It is bare-bones string processing.
+        // Because all we need to do is find '#define' commands and trim comments.
+        // I'm not exactly sure how #include is intended to work right now...
+        public void IncludeFile(string filePath)
+        {
+            // Break up the file
+            #region Simple Lexer
+            List<string> lines = new List<string>();
+
+            StringBuilder sb = new StringBuilder();
+            bool singleLineComment = false, multiLineComment = false;
+
+            using (StreamReader sr = File.OpenText(filePath))
+                while (sr.Peek() != -1)
+                {
+                    char c = (char)sr.Read();
+                    if (c == '\n')
+                    {
+                        string line = sb.ToString().Trim();
+                        if (line.Length > 0) lines.Add(line);
+                        sb.Clear();
+
+                        if (singleLineComment) singleLineComment = false;
+                    }
+                    else if (c == '/')
+                    {
+                        if (sr.Peek() == '/')
+                        {
+                            sr.Read();
+                            singleLineComment = true;
+                        }
+                        else if (sr.Peek() == '*')
+                        {
+                            sr.Read();
+                            multiLineComment = true;
+                        }
+                    }
+                    else if (c == '*')
+                    {
+                        if (multiLineComment && sr.Peek() == '/')
+                        {
+                            sr.Read();
+                            multiLineComment = false;
+                        }
+                    }
+                    else
+                    {
+                        if (!singleLineComment && !multiLineComment) sb.Append(c);
+                    }
+                }
+            #endregion
+
+            // Now comprehend each line
+            // TODO
+        }
+
+        /*
+
         /// <summary>
         /// Represents a block of compilable code.
         /// </summary>
@@ -814,6 +954,6 @@ namespace PokéScript2
             }
         }
 
-
+        */
     }
 }
